@@ -94,7 +94,7 @@ export default function PFPMaker(): ReactElement {
 
   // ESSENTIAL: Random position
   const getRandomPosition = () => {
-    const size = Math.random() * 60 + 40  // 40px a 100px
+    const size = Math.random() * 120 + 60  // 60px a 180px (más grande)
     return {
       x: Math.random() * 80 + 10,  // 10% a 90% - permite estar cerca de bordes
       y: Math.random() * 80 + 10,  // 10% a 90% - permite estar cerca de bordes
@@ -248,7 +248,7 @@ export default function PFPMaker(): ReactElement {
         const deltaX = event.clientX - dragState.startPos.x
         const deltaY = event.clientY - dragState.startPos.y
         const delta = (deltaX + deltaY) / 2
-        const newSize = Math.max(20, Math.min(150, dragState.startSize + delta * 0.5))  // Ajustado para píxeles
+        const newSize = Math.max(20, Math.min(400, dragState.startSize + delta * 0.5))  // Aumentado a 400px
         
         updateElement(dragState.elementId, { size: newSize })
       } else if (dragState.isRotating) {
@@ -468,13 +468,14 @@ export default function PFPMaker(): ReactElement {
                             pointerEvents: 'auto',
                             // Mejorar la experiencia visual
                             transition: dragState.isDragging ? 'none' : 'all 0.2s ease',
-                            // Evitar compresión
-                            minWidth: `${element.size}px`,
-                            minHeight: `${element.size}px`,
+                            // Tamaño exacto sin expansión
                             width: `${element.size}px`,
                             height: `${element.size}px`,
-                            flexShrink: 0,
-                            overflow: 'visible',
+                            padding: 0,
+                            margin: 0,
+                            border: 'none',
+                            outline: 'none',
+                            boxSizing: 'border-box',
                           }}
                           ref={(el) => {
                             // Solo log para elemento seleccionado y cuando se está arrastrando
@@ -483,8 +484,9 @@ export default function PFPMaker(): ReactElement {
                               const parentRect = el.parentElement?.getBoundingClientRect()
                               console.log(`📐 DOM ELEMENT:`, {
                                 elementPos: `${element.x.toFixed(1)}%, ${element.y.toFixed(1)}%`,
-                                elementSize: `${element.size}px`,
-                                domRect: `${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`,
+                                configuredSize: `${element.size}px`,
+                                visualSize: `${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`,
+                                sizeDifference: `W: ${(rect.width - element.size).toFixed(1)}px, H: ${(rect.height - element.size).toFixed(1)}px`,
                                 domLeft: rect.left.toFixed(1),
                                 domTop: rect.top.toFixed(1),
                                 parentWidth: parentRect?.width.toFixed(1),
@@ -512,14 +514,15 @@ export default function PFPMaker(): ReactElement {
                             src={preset?.image || "/placeholder.svg"}
                             alt={preset?.name}
                             style={{
-                              width: `${element.size}px`,  // Tamaño directo en píxeles
-                              height: `${element.size}px`, // Tamaño directo en píxeles
-                              minWidth: `${element.size}px`, // Evitar compresión
-                              minHeight: `${element.size}px`, // Evitar compresión
-                              maxWidth: `${element.size}px`, // Evitar expansión
-                              maxHeight: `${element.size}px`, // Evitar expansión
-                              objectFit: 'contain', // Mantener aspecto
-                              flexShrink: 0, // No comprimir
+                              width: `${element.size}px`,
+                              height: `${element.size}px`,
+                              objectFit: 'contain',
+                              display: 'block',
+                              padding: 0,
+                              margin: 0,
+                              border: 'none',
+                              outline: 'none',
+                              boxSizing: 'border-box',
                               pointerEvents: 'none',
                               userSelect: 'none',
                               MozUserSelect: 'none',
@@ -668,17 +671,21 @@ export default function PFPMaker(): ReactElement {
                     setIsProcessing(true);
                     // Obtener tamaño real del área visible (cuadrado)
                     const rect = canvasContainerRef.current.getBoundingClientRect();
-                    const exportSize = Math.round(Math.min(rect.width, rect.height));
+                    const canvasVisualSize = Math.min(rect.width, rect.height);
+                    const exportSize = 800; // Tamaño fijo de exportación
+                    
                     // Crear canvas cuadrado
                     const exportCanvas = document.createElement('canvas');
                     exportCanvas.width = exportSize;
                     exportCanvas.height = exportSize;
                     const ctx = exportCanvas.getContext('2d');
                     if (!ctx) return;
+                    
                     // Dibujar imagen base con object-fit: cover
                     const baseImg = new window.Image();
                     baseImg.src = uploadedImage;
                     await new Promise((resolve) => { baseImg.onload = resolve; });
+                    
                     // Calcular recorte para cover
                     const imgAspect = baseImg.width / baseImg.height;
                     const canvasAspect = 1; // cuadrado
@@ -693,7 +700,8 @@ export default function PFPMaker(): ReactElement {
                       sy = (baseImg.height - sh) / 2;
                     }
                     ctx.drawImage(baseImg, sx, sy, sw, sh, 0, 0, exportSize, exportSize);
-                    // Dibujar elementos
+                    
+                    // Dibujar elementos con escala exacta
                     for (const element of penguinElements) {
                       const preset = getPresetById(element.preset);
                       if (!preset) continue;
@@ -701,15 +709,25 @@ export default function PFPMaker(): ReactElement {
                       elImg.src = preset.image;
                       await new Promise((resolve) => { elImg.onload = resolve; });
                       ctx.save();
-                      // Posición y transformaciones (igual que en pantalla)
-                      ctx.translate((element.x / 100) * exportSize, (element.y / 100) * exportSize);
+                      
+                      // Calcular escala de canvas visual a exportación
+                      const scale = exportSize / canvasVisualSize;
+                      
+                      // Posición exacta (igual proporción que en pantalla)
+                      const x = (element.x / 100) * exportSize;
+                      const y = (element.y / 100) * exportSize;
+                      
+                      // Tamaño exacto escalado
+                      const size = element.size * scale;
+                      
+                      ctx.translate(x, y);
                       ctx.rotate((element.rotation * Math.PI) / 180);
                       if (element.flipped) ctx.scale(-1, 1);
-                      const size = (element.size / 100) * (exportSize / 4); // más pequeño en exportación
                       ctx.globalAlpha = element.opacity / 100;
                       ctx.drawImage(elImg, -size / 2, -size / 2, size, size);
                       ctx.restore();
                     }
+                    
                     // Descargar
                     const link = document.createElement('a');
                     link.download = `peanie_pfp_${Date.now()}.png`;
@@ -790,7 +808,7 @@ export default function PFPMaker(): ReactElement {
                       value={[selectedElementData.size]}
                       onValueChange={([value]) => updateElement(selectedElementData.id, { size: value })}
                       min={20}
-                      max={150}
+                      max={400}
                       step={5}
                       className="w-full"
                     />
