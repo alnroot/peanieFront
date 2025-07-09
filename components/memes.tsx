@@ -1,103 +1,76 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-
-const memeCategories = [
-  { title: "Penguin Classics", emoji: "🐧", count: "50+" },
-  { title: "Crypto Memes", emoji: "💎", count: "30+" },
-  { title: "Community Creations", emoji: "🎨", count: "100+" },
-  { title: "Viral Moments", emoji: "🔥", count: "25+" },
-]
-
-const featuredMemes = [
-  { title: "When PEANIE hits ATH", description: "Classic penguin celebration", likes: "1.2k" },
-  { title: "Diamond Flippers", description: "HODL vs Paper hands", likes: "890" },
-  { title: "Penguin Army", description: "Community strength", likes: "2.1k" },
-  { title: "To the Moon", description: "Rocket penguin", likes: "1.5k" },
+// Meme images from public/images
+const memeImages = [
+  "/images/meme1.jpg",
+  "/images/meme2.jpg", 
+  "/images/meme3.jpg",
+  "/images/meme4.jpg",
+  "/images/meme5.jpg",
+  "/images/meme6.jpg",
+  "/images/meme7.jpg",
+  "/images/meme8.jpg",
+  "/images/meme9.jpg",
 ]
 
 export default function Memes() {
   return (
     <section
       id="memes"
-      className="min-h-screen flex items-center relative overflow-hidden"
+      className="flex items-center relative overflow-hidden"
       style={{
         backgroundImage: "url('/images/bg-memes.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
+        backgroundColor: "#87CEEB",
+        minHeight: 'auto',
+        height: 'fit-content',
+        paddingTop: '4rem',
+        paddingBottom: '4rem',
       }}
     >
-      {/* Pingüino flotante */}
-      <img
-        src="/images/MEMES-PIEANIE.png"
-        alt=""
-        className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
-        style={{ 
-          zIndex: 1,
-          transform: `scaleX(1) scaleY(0.6)`
-        }}
-        draggable={false}
-      />
-      <div className="max-w-6xl mx-auto w-full relative z-10 pt-[8vh]">
-        <div className="text-center mb-[10vh]">
+     
+      <div className="max-w-4xl mx-auto w-full relative z-10 pt-[8vh]">
+        <div className="text-center mb-[6vh]">
           <img
             src="/images/title-memes.png"
             alt="PEANIE MEMES"
             className="w-[50vw] max-w-xl min-w-[350px] h-auto mx-auto"
           />
         </div>
-        {/* Meme Categories */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {memeCategories.map((category) => (
-            <Card
-              key={category.title}
-              className="bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/20 transition-all duration-300 cursor-pointer"
+        
+        {/* Subtitle */}
+        <div className="text-center mb-[8vh]">
+          <h2 className="text-white text-2xl md:text-3xl font-medium">Some Community Creations</h2>
+        </div>
+
+        {/* 3x3 Meme Grid */}
+        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-[8vh]">
+          {memeImages.map((image, index) => (
+            <div
+              key={index}
+              className="aspect-square bg-red-500 rounded-lg overflow-hidden hover:scale-105 transition-transform duration-300 cursor-pointer flex items-center justify-center"
             >
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl mb-3">{category.emoji}</div>
-                <h3 className="text-black font-semibold mb-2">{category.title}</h3>
-                <p className="text-blue-600 text-sm">{category.count} memes</p>
-              </CardContent>
-            </Card>
+              <img
+                src={image}
+                alt={`Meme ${index + 1}`}
+                className="w-full h-full object-cover rounded-lg"
+                onLoad={(e) => {
+                  // Ensure image is visible when loaded successfully
+                  e.currentTarget.style.display = 'block';
+                }}
+                onError={(e) => {
+                  // Hide broken image and show red background
+                  e.currentTarget.style.display = 'none';
+                  console.log(`Failed to load: ${image}`);
+                }}
+                style={{ display: 'block' }}
+              />
+            </div>
           ))}
         </div>
-        {/* Featured Memes */}
-        <Card className="bg-white/10 backdrop-blur-sm border-white/20 mb-8">
-          <CardContent className="p-8">
-            <h3 className="text-2xl font-bold text-black text-center mb-8">🔥 Trending Memes</h3>
-            <div className="grid md:grid-cols-2 gap-6">
-              {featuredMemes.map((meme) => (
-                <div
-                  key={meme.title}
-                  className="bg-white/10 rounded-lg p-6 hover:bg-white/20 transition-all duration-300 cursor-pointer"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg mb-4 flex items-center justify-center">
-                    <span className="text-6xl">🐧</span>
-                  </div>
-                  <h4 className="text-black font-semibold mb-2">{meme.title}</h4>
-                  <p className="text-gray-600 text-sm mb-3">{meme.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-blue-600 text-sm">❤️ {meme.likes}</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-white/10 text-black border-white/20 hover:bg-white/20"
-                    >
-                      Share
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        {/* Meme Submission */}
-        <Card className="bg-white/10 backdrop-blur-sm border-white/20"></Card>
       </div>
-      {/* Degradado para transición suave */}
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white/80 to-transparent z-30 pointer-events-none" />
     </section>
   )
 }

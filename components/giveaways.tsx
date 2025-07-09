@@ -91,7 +91,7 @@ export default function Giveaways() {
             className="w-[50vw] max-w-xl min-w-[350px] h-auto mx-auto"
           />
         </div>
-        <div className="max-w-md mx-auto px-8">
+        <div className="max-w-md md:max-w-xl mx-auto px-8 md:px-0">
           <h2 className="text-[rgba(0,185,219,1)] font-bold leading-tight text-[4vw] min-text-xl max-text-4xl md:text-4xl mb-4">
             GIVEAWAYS every Sunday!
           </h2>
