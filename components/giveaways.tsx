@@ -76,7 +76,7 @@ export default function Giveaways() {
         className="absolute top-0 left-0 w-full h-full select-none pointer-events-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${animation.x}px) translateY(${animation.y}px)`,
+          transform: `translateX(${animation.x}px) translateY(${animation.y}px) scaleX(1) scaleY(0.6)`,
           opacity: animation.opacity,
           transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
         }}
@@ -91,7 +91,7 @@ export default function Giveaways() {
             className="w-[50vw] max-w-xl min-w-[350px] h-auto mx-auto"
           />
         </div>
-        <div className="max-w-xl mx-auto ">
+        <div className="max-w-md mx-auto px-8">
           <h2 className="text-[rgba(0,185,219,1)] font-bold leading-tight text-[4vw] min-text-xl max-text-4xl md:text-4xl mb-4">
             GIVEAWAYS every Sunday!
           </h2>

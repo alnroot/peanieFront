@@ -10,16 +10,16 @@ import { Slider } from "@/components/ui/slider"
 import { Upload, Download, Trash2 } from "lucide-react"
 
 const penguinPresets = [
-  { id: "doble", name: "Peanie Doble", image: "/images/peanie-doble.png", description: "Dos pingüinos tiernos" },
+  { id: "doble", name: "Peanie Doble", image: "/images/peanie-doble.png", description: "Two cute penguins" },
   {
     id: "dinosaurio",
     name: "Peanie Dino",
     image: "/images/peanie-dinosaurio.png",
-    description: "Con gorro de dinosaurio",
+    description: "With dinosaur hat",
   },
-  { id: "asomando", name: "Peanie Peek", image: "/images/peanie-asomando.png", description: "Asomándose tímidamente" },
-  { id: "cara-tierna", name: "Peanie Cute", image: "/images/peanie-cara-tierna.png", description: "Cara súper tierna" },
-  { id: "saludando", name: "Peanie Wave", image: "/images/peanie-saludando.png", description: "Saludando amigable" },
+  { id: "asomando", name: "Peanie Peek", image: "/images/peanie-asomando.png", description: "Peeking shyly" },
+  { id: "cara-tierna", name: "Peanie Cute", image: "/images/peanie-cara-tierna.png", description: "Super cute face" },
+  { id: "saludando", name: "Peanie Wave", image: "/images/peanie-saludando.png", description: "Friendly waving" },
 ]
 
 interface PenguinElement {
@@ -368,7 +368,7 @@ export default function PFPMaker(): ReactElement {
         className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${parallax.x}px) rotate(${parallax.rot}deg)`,
+          transform: `translateX(${parallax.x}px) rotate(${parallax.rot}deg) scaleX(1) scaleY(0.6)`,
           transition: "none",
         }}
         draggable={false}

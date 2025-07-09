@@ -34,7 +34,10 @@ export default function Memes() {
         src="/images/MEMES-PIEANIE.png"
         alt=""
         className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
-        style={{ zIndex: 1 }}
+        style={{ 
+          zIndex: 1,
+          transform: `scaleX(1) scaleY(0.6)`
+        }}
         draggable={false}
       />
       <div className="max-w-6xl mx-auto w-full relative z-10 pt-[8vh]">
