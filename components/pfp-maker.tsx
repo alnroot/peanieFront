@@ -38,29 +38,41 @@ export default function PFPMaker(): ReactElement {
   const [penguinElements, setPenguinElements] = useState<PenguinElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [isRotating, setIsRotating] = useState(false)
-  const [dragElementId, setDragElementId] = useState<string | null>(null)
-  const [initialSize, setInitialSize] = useState(0)
-  const [initialRotation, setInitialRotation] = useState(0)
-  const [initialMousePos, setInitialMousePos] = useState({ x: 0, y: 0 })
-  const [rotationCenter, setRotationCenter] = useState({ x: 0, y: 0 })
+  
+  // ESSENTIAL: Missing refs and state
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const canvasContainerRef = useRef<HTMLDivElement>(null)
-  const [canvasSize, setCanvasSize] = useState(400); // default fallback
-  const [parallax, setParallax] = useState({ x: 0, rot: 0 });
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [canvasSize, setCanvasSize] = useState(400)
+  const [parallax, setParallax] = useState({ x: 0, rot: 0 })
 
+  // DRASTIC CHANGE: Simple state with direct mouse tracking
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean
+    isResizing: boolean
+    isRotating: boolean
+    elementId: string | null
+    startPos: { x: number, y: number }
+    startSize: number
+    startRotation: number
+  }>({
+    isDragging: false,
+    isResizing: false,
+    isRotating: false,
+    elementId: null,
+    startPos: { x: 0, y: 0 },
+    startSize: 0,
+    startRotation: 0
+  })
+
+  // ESSENTIAL: Basic animation
   useEffect(() => {
     let animationFrame: number;
     const animate = () => {
       const t = Date.now() / 1000;
-      // Movimiento de izquierda a derecha (onda senoidal)
-      const x = Math.sin(t * 0.7) * 60; // 60px de amplitud
-      // Rotación acompaña el movimiento
-      const rot = Math.sin(t * 0.7) * 12; // 12 grados de rotación
+      const x = Math.sin(t * 0.7) * 60;
+      const rot = Math.sin(t * 0.7) * 12;
       setParallax({ x, rot });
       animationFrame = requestAnimationFrame(animate);
     };
@@ -68,6 +80,7 @@ export default function PFPMaker(): ReactElement {
     return () => cancelAnimationFrame(animationFrame);
   }, []);
 
+  // ESSENTIAL: Image upload
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file && file.size <= 10 * 1024 * 1024) {
@@ -79,48 +92,54 @@ export default function PFPMaker(): ReactElement {
     }
   }, [])
 
-  // Función para generar posición random SIN repetir presets
-  const getRandomPosition = () => ({
-    x: Math.random() * 80 + 10, // Entre 10% y 90%
-    y: Math.random() * 80 + 10, // Entre 10% y 90%
-    size: Math.random() * 100 + 50, // Entre 50% y 150%
-    rotation: Math.random() * 30 - 15, // Entre -15° y 15°
-    opacity: 100, // SIEMPRE 100%
-    flipped: Math.random() > 0.5,
-  })
+  // ESSENTIAL: Random position
+  const getRandomPosition = () => {
+    const size = Math.random() * 60 + 40  // 40px a 100px
+    return {
+      x: Math.random() * 80 + 10,  // 10% a 90% - permite estar cerca de bordes
+      y: Math.random() * 80 + 10,  // 10% a 90% - permite estar cerca de bordes
+      size,
+      rotation: Math.random() * 30 - 15,
+      opacity: 100,
+      flipped: Math.random() > 0.5,
+    }
+  }
 
-  // Función principal: Customize your PFP - SIN REPETIR IMÁGENES
+  // ESSENTIAL: Customize function
   const customizeRandomPFP = useCallback(() => {
     if (!uploadedImage) return
-
     const newElements: PenguinElement[] = []
-    const numElements = Math.min(Math.floor(Math.random() * 3) + 2, penguinPresets.length) // Entre 2 y 4, pero no más que presets disponibles
-
-    // Crear array de presets disponibles y mezclarlo
+    const numElements = Math.min(Math.floor(Math.random() * 3) + 2, penguinPresets.length)
     const availablePresets = [...penguinPresets]
     for (let i = availablePresets.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[availablePresets[i], availablePresets[j]] = [availablePresets[j], availablePresets[i]]
     }
-
-    // Tomar solo los primeros numElements (sin repetir)
     for (let i = 0; i < numElements; i++) {
       const preset = availablePresets[i]
       const position = getRandomPosition()
-
       newElements.push({
         id: `penguin-${Date.now()}-${i}`,
         preset: preset.id,
         ...position,
       })
     }
-
     setPenguinElements(newElements)
     setSelectedElement(newElements[0]?.id || null)
   }, [uploadedImage])
 
+  // ANALYTICAL DEBUG: Track everything that could affect visual size
   const updateElement = useCallback((elementId: string, updates: Partial<PenguinElement>) => {
-    setPenguinElements((prev) => prev.map((el) => (el.id === elementId ? { ...el, ...updates } : el)))
+    console.log(`🔄 UPDATE: ${elementId.slice(-8)} →`, {
+      x: updates.x?.toFixed(1),
+      y: updates.y?.toFixed(1), 
+      size: updates.size,
+      rotation: updates.rotation?.toFixed(1)
+    })
+    
+    setPenguinElements((prev) => 
+      prev.map((el) => (el.id === elementId ? { ...el, ...updates } : el))
+    )
   }, [])
 
   const removeElement = useCallback(
@@ -138,228 +157,163 @@ export default function PFPMaker(): ReactElement {
     setSelectedElement(null)
   }, [])
 
-  // Drag functionality
-  const handleMouseDown = useCallback((event: React.MouseEvent, elementId: string) => {
-    event.preventDefault()
-    setIsDragging(true)
-    setDragElementId(elementId)
+  // ANALYTICAL: Start operations with detailed logging
+  const startDrag = useCallback((elementId: string, x: number, y: number) => {
+    const element = penguinElements.find(el => el.id === elementId)
+    if (!element) return
+
+    console.log(`🚀 START DRAG:`, { elementId, mouseStart: { x, y } })
+
+    setDragState({
+      isDragging: true,
+      isResizing: false,
+      isRotating: false,
+      elementId,
+      startPos: { x, y },
+      startSize: element.size,
+      startRotation: element.rotation
+    })
     setSelectedElement(elementId)
+  }, [penguinElements])
+
+  const startResize = useCallback((elementId: string, x: number, y: number) => {
+    const element = penguinElements.find(el => el.id === elementId)
+    if (!element) return
+
+    setDragState({
+      isDragging: false,
+      isResizing: true,
+      isRotating: false,
+      elementId,
+      startPos: { x, y },
+      startSize: element.size,
+      startRotation: element.rotation
+    })
+    setSelectedElement(elementId)
+  }, [penguinElements])
+
+  const startRotate = useCallback((elementId: string, x: number, y: number) => {
+    const element = penguinElements.find(el => el.id === elementId)
+    if (!element) return
+
+    setDragState({
+      isDragging: false,
+      isResizing: false,
+      isRotating: true,
+      elementId,
+      startPos: { x, y },
+      startSize: element.size,
+      startRotation: element.rotation
+    })
+    setSelectedElement(elementId)
+  }, [penguinElements])
+
+  // ANALYTICAL: End operations with summary
+  const endOperation = useCallback(() => {
+    setDragState({
+      isDragging: false,
+      isResizing: false,
+      isRotating: false,
+      elementId: null,
+      startPos: { x: 0, y: 0 },
+      startSize: 0,
+      startRotation: 0
+    })
   }, [])
 
-  // Resize functionality
-  const handleResizeStart = useCallback(
-    (event: React.MouseEvent, elementId: string) => {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsResizing(true)
-      setDragElementId(elementId)
-      setSelectedElement(elementId)
-
-      const element = penguinElements.find((el) => el.id === elementId)
-      if (element) {
-        setInitialSize(element.size)
-        setInitialMousePos({ x: event.clientX, y: event.clientY })
-      }
-    },
-    [penguinElements],
-  )
-
-  // Rotation functionality
-  const handleRotationStart = useCallback(
-    (event: React.MouseEvent, elementId: string) => {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsRotating(true)
-      setDragElementId(elementId)
-      setSelectedElement(elementId)
-
-      const element = penguinElements.find((el) => el.id === elementId)
-      if (element && canvasContainerRef.current) {
-        setInitialRotation(element.rotation)
-
-        // Calcular el centro del elemento para la rotación
-        const rect = canvasContainerRef.current.getBoundingClientRect()
-        const centerX = rect.left + (rect.width * element.x) / 100
-        const centerY = rect.top + (rect.height * element.y) / 100
-
-        setRotationCenter({ x: centerX, y: centerY })
-        setInitialMousePos({ x: event.clientX, y: event.clientY })
-      }
-    },
-    [penguinElements],
-  )
-
-  const handleMouseMove = useCallback(
-    (event: React.MouseEvent) => {
-      if (!dragElementId || !canvasContainerRef.current) return
-
-      if (isResizing) {
-        // Resize logic
-        const deltaX = event.clientX - initialMousePos.x
-        const deltaY = event.clientY - initialMousePos.y
-        const delta = (deltaX + deltaY) / 2
-        const sizeDelta = delta * 0.5
-        const newSize = Math.max(10, Math.min(300, initialSize + sizeDelta))
-
-        updateElement(dragElementId, { size: newSize })
-      } else if (isRotating) {
-        // Rotation logic
-        const deltaX = event.clientX - rotationCenter.x
-        const deltaY = event.clientY - rotationCenter.y
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI)
-
-        const initialDeltaX = initialMousePos.x - rotationCenter.x
-        const initialDeltaY = initialMousePos.y - rotationCenter.y
-        const initialAngle = Math.atan2(initialDeltaY, initialDeltaX) * (180 / Math.PI)
-
-        const rotationDelta = angle - initialAngle
-        const newRotation = Math.max(-180, Math.min(180, initialRotation + rotationDelta))
-
-        updateElement(dragElementId, { rotation: newRotation })
-      } else if (isDragging) {
-        // Drag logic
-        const rect = canvasContainerRef.current.getBoundingClientRect()
-        const x = ((event.clientX - rect.left) / rect.width) * 100
-        const y = ((event.clientY - rect.top) / rect.height) * 100
-
-        const constrainedX = Math.max(-50, Math.min(150, x))
-        const constrainedY = Math.max(-50, Math.min(150, y))
-
-        updateElement(dragElementId, { x: constrainedX, y: constrainedY })
-      }
-    },
-    [
-      isDragging,
-      isResizing,
-      isRotating,
-      dragElementId,
-      updateElement,
-      initialSize,
-      initialRotation,
-      initialMousePos,
-      rotationCenter,
-    ],
-  )
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-    setIsResizing(false)
-    setIsRotating(false)
-    setDragElementId(null)
-  }, [])
-
-  // Global mouse events to handle dragging outside canvas
-  const handleGlobalMouseMove = useCallback(
-    (event: MouseEvent) => {
-      if (!dragElementId || !canvasContainerRef.current) return
-
-      if (isResizing) {
-        const deltaX = event.clientX - initialMousePos.x
-        const deltaY = event.clientY - initialMousePos.y
-        const delta = (deltaX + deltaY) / 2
-        const sizeDelta = delta * 0.5
-        const newSize = Math.max(10, Math.min(300, initialSize + sizeDelta))
-
-        updateElement(dragElementId, { size: newSize })
-      } else if (isRotating) {
-        const deltaX = event.clientX - rotationCenter.x
-        const deltaY = event.clientY - rotationCenter.y
-        const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI)
-
-        const initialDeltaX = initialMousePos.x - rotationCenter.x
-        const initialDeltaY = initialMousePos.y - rotationCenter.y
-        const initialAngle = Math.atan2(initialDeltaY, initialDeltaX) * (180 / Math.PI)
-
-        const rotationDelta = angle - initialAngle
-        const newRotation = Math.max(-180, Math.min(180, initialRotation + rotationDelta))
-
-        updateElement(dragElementId, { rotation: newRotation })
-      } else if (isDragging) {
-        const rect = canvasContainerRef.current.getBoundingClientRect()
-        const x = ((event.clientX - rect.left) / rect.width) * 100
-        const y = ((event.clientY - rect.top) / rect.height) * 100
-
-        const constrainedX = Math.max(-50, Math.min(150, x))
-        const constrainedY = Math.max(-50, Math.min(150, y))
-
-        updateElement(dragElementId, { x: constrainedX, y: constrainedY })
-      }
-    },
-    [
-      isDragging,
-      isResizing,
-      isRotating,
-      dragElementId,
-      updateElement,
-      initialSize,
-      initialRotation,
-      initialMousePos,
-      rotationCenter,
-    ],
-  )
-
-  const handleGlobalMouseUp = useCallback(() => {
-    setIsDragging(false)
-    setIsResizing(false)
-    setIsRotating(false)
-    setDragElementId(null)
-  }, [])
-
-  // Add global event listeners
+  // ANALYTICAL: Enhanced drag handler with detailed logging
   React.useEffect(() => {
-    if (isDragging || isResizing || isRotating) {
-      document.addEventListener("mousemove", handleGlobalMouseMove)
-      document.addEventListener("mouseup", handleGlobalMouseUp)
-
-      return () => {
-        document.removeEventListener("mousemove", handleGlobalMouseMove)
-        document.removeEventListener("mouseup", handleGlobalMouseUp)
-      }
-    }
-  }, [isDragging, isResizing, isRotating, handleGlobalMouseMove, handleGlobalMouseUp])
-
-  // Touch events for mobile
-  const handleTouchStart = useCallback((event: React.TouchEvent, elementId: string) => {
-    event.preventDefault()
-    setIsDragging(true)
-    setDragElementId(elementId)
-    setSelectedElement(elementId)
-  }, [])
-
-  const handleTouchMove = useCallback(
-    (event: React.TouchEvent) => {
-      if (!isDragging || !dragElementId || !canvasContainerRef.current || !event.touches[0]) return
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      if (!dragState.elementId || !canvasContainerRef.current) return
 
       const rect = canvasContainerRef.current.getBoundingClientRect()
-      const x = ((event.touches[0].clientX - rect.left) / rect.width) * 100
-      const y = ((event.touches[0].clientY - rect.top) / rect.height) * 100
 
-      const constrainedX = Math.max(-50, Math.min(150, x))
-      const constrainedY = Math.max(-50, Math.min(150, y))
+      if (dragState.isDragging) {
+        const element = penguinElements.find(el => el.id === dragState.elementId)
+        if (!element) return
+        
+        const x = ((event.clientX - rect.left) / rect.width) * 100
+        const y = ((event.clientY - rect.top) / rect.height) * 100
+        
+        // Permitir que el centro llegue hasta los bordes (0% a 100%)
+        // Esto permite que el elemento esté mitad afuera, mitad adentro
+        const constrainedX = Math.max(0, Math.min(100, x))
+        const constrainedY = Math.max(0, Math.min(100, y))
+        
+        // Log ultra detallado de la posición
+        console.log(`🔍 DRAG: X=${constrainedX.toFixed(1)}% Y=${constrainedY.toFixed(1)}% (center can reach edges)`)
+        
+        updateElement(dragState.elementId, { x: constrainedX, y: constrainedY })
+      } else if (dragState.isResizing) {
+        const deltaX = event.clientX - dragState.startPos.x
+        const deltaY = event.clientY - dragState.startPos.y
+        const delta = (deltaX + deltaY) / 2
+        const newSize = Math.max(20, Math.min(150, dragState.startSize + delta * 0.5))  // Ajustado para píxeles
+        
+        updateElement(dragState.elementId, { size: newSize })
+      } else if (dragState.isRotating) {
+        const element = penguinElements.find(el => el.id === dragState.elementId)
+        if (element) {
+          const centerX = rect.left + (rect.width * element.x) / 100
+          const centerY = rect.top + (rect.height * element.y) / 100
+          const angle = Math.atan2(event.clientY - centerY, event.clientX - centerX) * (180 / Math.PI)
+          const startAngle = Math.atan2(dragState.startPos.y - centerY, dragState.startPos.x - centerX) * (180 / Math.PI)
+          const rotation = Math.max(-180, Math.min(180, dragState.startRotation + (angle - startAngle)))
+          
+          updateElement(dragState.elementId, { rotation })
+        }
+      }
+    }
 
-      updateElement(dragElementId, { x: constrainedX, y: constrainedY })
-    },
-    [isDragging, dragElementId, updateElement],
-  )
+    const handleGlobalMouseUp = () => {
+      endOperation()
+    }
 
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false)
-    setDragElementId(null)
+    if (dragState.isDragging || dragState.isResizing || dragState.isRotating) {
+      document.addEventListener('mousemove', handleGlobalMouseMove)
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove)
+        document.removeEventListener('mouseup', handleGlobalMouseUp)
+      }
+    }
+  }, [dragState.isDragging, dragState.isResizing, dragState.isRotating, dragState.elementId, dragState.startPos, dragState.startSize, dragState.startRotation, updateElement, endOperation])
+
+  // DRASTIC: Simple handlers
+  const handleMouseDown = useCallback((event: React.MouseEvent, elementId: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    startDrag(elementId, event.clientX, event.clientY)
+  }, [startDrag])
+
+  const handleResizeStart = useCallback((event: React.MouseEvent, elementId: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    startResize(elementId, event.clientX, event.clientY)
+  }, [startResize])
+
+  const handleRotationStart = useCallback((event: React.MouseEvent, elementId: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    startRotate(elementId, event.clientX, event.clientY)
+  }, [startRotate])
+
+  // MINIMAL: Basic handlers to prevent errors
+  const handleTouchStart = useCallback((event: React.TouchEvent, elementId: string) => {
+    // Disabled for now
   }, [])
-
-  const handleWheel = useCallback(
-    (event: React.WheelEvent, elementId: string) => {
-      event.preventDefault()
-      const element = penguinElements.find((el) => el.id === elementId)
-      if (!element) return
-
-      const delta = event.deltaY > 0 ? -10 : 10
-      const newSize = Math.max(10, Math.min(300, element.size + delta))
-      updateElement(elementId, { size: newSize })
-      setSelectedElement(elementId)
-    },
-    [penguinElements, updateElement],
-  )
+  const handleTouchMove = useCallback((event: React.TouchEvent) => {
+    // Disabled for now
+  }, [])
+  const handleTouchEnd = useCallback(() => {
+    // Disabled for now
+  }, [])
+  const handleTouchResizeStart = useCallback((event: React.TouchEvent, elementId: string) => {
+    // Disabled for now
+  }, [])
+  const handleWheel = useCallback((event: React.WheelEvent, elementId: string) => {
+    // Disabled for now
+  }, [])
 
   const downloadPFP = useCallback(async () => {
     if (!uploadedImage || !canvasRef.current) return
@@ -381,18 +335,19 @@ export default function PFPMaker(): ReactElement {
 
   const selectedElementData = selectedElement ? penguinElements.find((el) => el.id === selectedElement) : null
 
-  // Actualizar tamaño del canvas visible en resize
+  // ANALYTICAL: Track canvas size changes
   useLayoutEffect(() => {
     function updateSize() {
       if (canvasContainerRef.current) {
         const rect = canvasContainerRef.current.getBoundingClientRect();
-        setCanvasSize(Math.min(rect.width, rect.height));
+        const newSize = Math.min(rect.width, rect.height);
+        setCanvasSize(newSize);
       }
     }
     updateSize();
     window.addEventListener('resize', updateSize);
     return () => window.removeEventListener('resize', updateSize);
-  }, []);
+  }, [canvasSize]);
 
   return (
     <section
@@ -482,8 +437,6 @@ export default function PFPMaker(): ReactElement {
               <div
                 ref={canvasContainerRef}
                 className="relative aspect-square bg-gray-800 rounded-lg overflow-hidden border-2 border-dashed border-white/30 canvas-container"
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
@@ -502,17 +455,55 @@ export default function PFPMaker(): ReactElement {
                       return (
                         <div
                           key={element.id}
-                          className={`absolute draggable-penguin transition-all duration-200 ${
+                          className={`absolute cursor-move ${
                             isSelected ? "ring-2 ring-blue-400 ring-opacity-75" : ""
                           }`}
                           style={{
                             left: `${element.x}%`,
                             top: `${element.y}%`,
-                            transform: `translate(-50%, -50%) scale(${element.size / 100}) rotate(${element.rotation}deg) ${element.flipped ? "scaleX(-1)" : ""}`,
+                            transform: `translate(-50%, -50%) rotate(${element.rotation}deg) ${element.flipped ? "scaleX(-1)" : ""}`,
                             opacity: element.opacity / 100,
                             zIndex: isSelected ? 10 : 5,
+                            userSelect: 'none',
+                            pointerEvents: 'auto',
+                            // Mejorar la experiencia visual
+                            transition: dragState.isDragging ? 'none' : 'all 0.2s ease',
+                            // Evitar compresión
+                            minWidth: `${element.size}px`,
+                            minHeight: `${element.size}px`,
+                            width: `${element.size}px`,
+                            height: `${element.size}px`,
+                            flexShrink: 0,
+                            overflow: 'visible',
                           }}
-                          onMouseDown={(e) => handleMouseDown(e, element.id)}
+                          ref={(el) => {
+                            // Solo log para elemento seleccionado y cuando se está arrastrando
+                            if (el && isSelected && dragState.isDragging && dragState.elementId === element.id) {
+                              const rect = el.getBoundingClientRect()
+                              const parentRect = el.parentElement?.getBoundingClientRect()
+                              console.log(`📐 DOM ELEMENT:`, {
+                                elementPos: `${element.x.toFixed(1)}%, ${element.y.toFixed(1)}%`,
+                                elementSize: `${element.size}px`,
+                                domRect: `${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`,
+                                domLeft: rect.left.toFixed(1),
+                                domTop: rect.top.toFixed(1),
+                                parentWidth: parentRect?.width.toFixed(1),
+                                transform: el.style.transform
+                              })
+                            }
+                          }}
+                          onMouseDown={(e) => {
+                            console.log(`🖱️ CLICK on ${element.id}`)
+                            
+                            // Only handle drag if not clicking on controls
+                            const target = e.target as HTMLElement
+                            if (!target.closest('.resize-handle') && !target.closest('.rotation-handle')) {
+                              console.log(`✅ DRAG START`)
+                              handleMouseDown(e, element.id)
+                            } else {
+                              console.log(`❌ BLOCKED - control handle`)
+                            }
+                          }}
                           onTouchStart={(e) => handleTouchStart(e, element.id)}
                           onClick={() => setSelectedElement(element.id)}
                           onWheel={(e) => handleWheel(e, element.id)}
@@ -521,14 +512,38 @@ export default function PFPMaker(): ReactElement {
                             src={preset?.image || "/placeholder.svg"}
                             alt={preset?.name}
                             style={{
-                              width: `${(element.size / 100) * (canvasSize / 4)}px`,
-                              height: `${(element.size / 100) * (canvasSize / 4)}px`,
+                              width: `${element.size}px`,  // Tamaño directo en píxeles
+                              height: `${element.size}px`, // Tamaño directo en píxeles
+                              minWidth: `${element.size}px`, // Evitar compresión
+                              minHeight: `${element.size}px`, // Evitar compresión
+                              maxWidth: `${element.size}px`, // Evitar expansión
+                              maxHeight: `${element.size}px`, // Evitar expansión
+                              objectFit: 'contain', // Mantener aspecto
+                              flexShrink: 0, // No comprimir
                               pointerEvents: 'none',
                               userSelect: 'none',
                               MozUserSelect: 'none',
                               WebkitUserSelect: 'none',
                             }}
                             draggable={false}
+                            onLoad={() => {
+                              // Debug: Log del tamaño cuando se carga
+                              if (isSelected) {
+                                console.log(`🖼️ IMAGE: ${element.size}px - loaded`)
+                              }
+                            }}
+                            ref={(img) => {
+                              // Log de la imagen cuando se está arrastrando
+                              if (img && isSelected && dragState.isDragging && dragState.elementId === element.id) {
+                                const rect = img.getBoundingClientRect()
+                                console.log(`🖼️ IMG DOM:`, {
+                                  naturalSize: `${img.naturalWidth}x${img.naturalHeight}`,
+                                  styleSize: `${img.style.width} x ${img.style.height}`,
+                                  computedSize: `${rect.width.toFixed(1)}x${rect.height.toFixed(1)}`,
+                                  elementSize: `${element.size}px`
+                                })
+                              }
+                            }}
                           />
 
                           {/* Controls for selected element */}
@@ -536,30 +551,76 @@ export default function PFPMaker(): ReactElement {
                             <>
                               {/* Rotation handle (green, top center) */}
                               <div
-                                className="rotation-handle"
-                                onMouseDown={(e) => handleRotationStart(e, element.id)}
+                                className="rotation-handle absolute w-4 h-4 bg-green-500 rounded-full cursor-grab hover:bg-green-400 transition-colors z-30"
+                                style={{ 
+                                  top: "-8px", 
+                                  left: "50%", 
+                                  transform: "translateX(-50%)",
+                                  boxShadow: "0 0 8px rgba(34, 197, 94, 0.6)"
+                                }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleRotationStart(e, element.id)
+                                }}
                               />
 
                               {/* Corner resize handles (blue) */}
                               <div
-                                className="resize-handle"
-                                style={{ top: "-6px", right: "-6px" }}
-                                onMouseDown={(e) => handleResizeStart(e, element.id)}
+                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30"
+                                style={{ 
+                                  top: "-8px", 
+                                  right: "-8px",
+                                  boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
+                                }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleResizeStart(e, element.id)
+                                }}
+                                onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle"
-                                style={{ bottom: "-6px", right: "-6px" }}
-                                onMouseDown={(e) => handleResizeStart(e, element.id)}
+                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-ne-resize hover:bg-blue-400 transition-colors z-30"
+                                style={{ 
+                                  bottom: "-8px", 
+                                  right: "-8px",
+                                  boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
+                                }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleResizeStart(e, element.id)
+                                }}
+                                onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle"
-                                style={{ bottom: "-6px", left: "-6px" }}
-                                onMouseDown={(e) => handleResizeStart(e, element.id)}
+                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30"
+                                style={{ 
+                                  bottom: "-8px", 
+                                  left: "-8px",
+                                  boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
+                                }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleResizeStart(e, element.id)
+                                }}
+                                onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle"
-                                style={{ top: "-6px", left: "-6px" }}
-                                onMouseDown={(e) => handleResizeStart(e, element.id)}
+                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-se-resize hover:bg-blue-400 transition-colors z-30"
+                                style={{ 
+                                  top: "-8px", 
+                                  left: "-8px",
+                                  boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
+                                }}
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleResizeStart(e, element.id)
+                                }}
+                                onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                             </>
                           )}
@@ -567,7 +628,11 @@ export default function PFPMaker(): ReactElement {
                           {/* Delete button */}
                           {isSelected && (
                             <button
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors z-20"
+                              className="absolute -top-4 -right-4 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors z-20 shadow-lg"
+                              style={{
+                                transform: "translate(50%, -50%)",
+                                border: "2px solid white"
+                              }}
                               onClick={(e) => {
                                 e.stopPropagation()
                                 removeElement(element.id)
@@ -696,8 +761,8 @@ export default function PFPMaker(): ReactElement {
                     <Slider
                       value={[selectedElementData.x]}
                       onValueChange={([value]) => updateElement(selectedElementData.id, { x: value })}
-                      min={-50}
-                      max={150}
+                      min={0}
+                      max={100}
                       step={1}
                       className="w-full"
                     />
@@ -710,8 +775,8 @@ export default function PFPMaker(): ReactElement {
                     <Slider
                       value={[selectedElementData.y]}
                       onValueChange={([value]) => updateElement(selectedElementData.id, { y: value })}
-                      min={-50}
-                      max={150}
+                      min={0}
+                      max={100}
                       step={1}
                       className="w-full"
                     />
@@ -719,13 +784,13 @@ export default function PFPMaker(): ReactElement {
 
                   <div>
                     <label className="text-black text-sm font-medium mb-2 block">
-                      Size ({selectedElementData.size}%)
+                      Size ({selectedElementData.size}px)
                     </label>
                     <Slider
                       value={[selectedElementData.size]}
                       onValueChange={([value]) => updateElement(selectedElementData.id, { size: value })}
-                      min={10}
-                      max={300}
+                      min={20}
+                      max={150}
                       step={5}
                       className="w-full"
                     />
