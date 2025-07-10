@@ -484,10 +484,16 @@ export default function PFPMaker(): ReactElement {
       <img
         src="/images/PFPMAKER-PIEANIE.png"
         alt=""
-        className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
+        className={`absolute pointer-events-none select-none ${
+          isMobile 
+            ? 'bottom-[5vh] right-0 w-[565vw] h-auto' 
+            : 'top-0 left-0 w-full h-full'
+        }`}
         style={{
           zIndex: 1,
-          transform: `translateX(${parallax.x}px) rotate(${parallax.rot}deg) ${isMobile ? 'scaleX(1.3) scaleY(0.6)' : ''}`,
+          transform: isMobile 
+            ? 'none' 
+            : `translateX(${parallax.x}px) rotate(${parallax.rot}deg)`,
           transition: "none",
         }}
         draggable={false}
