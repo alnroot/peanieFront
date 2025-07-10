@@ -93,12 +93,12 @@ export default function Giveaways() {
         draggable={false}
       />
       {/* Contenido */}
-      <div className="max-w-4xl mx-auto w-full relative z-[20] pt-[3vh]">
-        <div className="text-center mb-[10vh]">
+      <div className={`max-w-4xl mx-auto w-full relative z-[20] ${isMobile ? 'pt-[3vh]' : 'pt-[6vh]'}`}>
+        <div className={`text-center ${isMobile ? 'mb-[10vh]' : 'mb-[6vh]'}`}>
           <img
             src="/images/title-giveaways.png"
             alt="GIVEAWAYS"
-            className="w-[50vw] max-w-xl min-w-[350px] h-auto mx-auto"
+            className={`${isMobile ? 'w-[50vw] max-w-xl min-w-[350px]' : 'w-[40vw] max-w-lg min-w-[300px]'} h-auto mx-auto`}
           />
         </div>
         <div className="max-w-md md:max-w-xl mx-auto px-8 md:px-0">

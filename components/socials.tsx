@@ -71,14 +71,14 @@ export default function Socials() {
         className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${parallax.x + (isMobile ? 60 : 0)}px) translateY(${parallax.y}px) ${isMobile ? 'scaleX(1.3) scaleY(0.6)' : ''}`,
+          transform: `translateX(${parallax.x + (isMobile ? 100 : 0)}px) translateY(${parallax.y + (isMobile ? 10 : 0)}px) ${isMobile ? 'scaleX(1.5) scaleY(0.6)' : ''}`,
           opacity: parallax.opacity,
           transition: "transform 0.1s ease-out, opacity 0.1s ease-out",
         }}
         draggable={false}
       />
-      <div className="max-w-4xl mx-auto w-full relative z-[20] pt-[10vh]">
-        <div className="text-center mb-[10vh]">
+      <div className="max-w-4xl mx-auto w-full relative z-[20] pt-[14vh]">
+        <div className="text-center mb-[14vh]">
           <img
             src="/images/title-socials.png"
             alt="SOCIALS"
