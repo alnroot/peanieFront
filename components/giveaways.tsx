@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function Giveaways() {
   const [animation, setAnimation] = useState({ x: 0, y: -200, opacity: 0 });
+  const [isMobile, setIsMobile] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,10 +52,19 @@ export default function Giveaways() {
       });
     };
 
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
     window.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleResize);
     handleScroll(); // Llamar una vez para establecer la posición inicial
+    handleResize(); // Llamar una vez para establecer el estado inicial
     
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   return (
@@ -64,7 +74,7 @@ export default function Giveaways() {
       className="min-h-screen relative overflow-hidden"
       style={{
         backgroundImage: "url('/images/background-2.png')",
-        backgroundSize: "cover",
+        backgroundSize: isMobile ? "auto 100%" : "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
@@ -76,7 +86,7 @@ export default function Giveaways() {
         className="absolute top-0 left-0 w-full h-full select-none pointer-events-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${animation.x}px) translateY(${animation.y}px) scaleX(1) scaleY(0.6)`,
+          transform: `translateX(${animation.x + (isMobile ? -60 : 0)}px) translateY(${animation.y}px) ${isMobile ? 'scaleX(1.3) scaleY(0.6)' : ''}`,
           opacity: animation.opacity,
           transition: "transform 0.15s ease-out, opacity 0.15s ease-out",
         }}
@@ -148,8 +158,7 @@ export default function Giveaways() {
           </ul>
         </div>
       </div>
-      {/* Degradado para transición suave */}
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white/80 to-transparent z-30 pointer-events-none" />
+
       <style jsx>{`
         .custom-bullet {
           color: rgba(0,185,219,1);

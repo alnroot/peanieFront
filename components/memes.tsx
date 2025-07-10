@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 // Meme images from public/images
 const memeImages = [
   "/images/meme1.jpg",
@@ -14,24 +16,32 @@ const memeImages = [
 ]
 
 export default function Memes() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Llamar una vez para establecer el estado inicial
+    
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   return (
     <section
       id="memes"
-      className="flex items-center relative overflow-hidden"
+      className="min-h-screen relative overflow-hidden"
       style={{
         backgroundImage: "url('/images/bg-memes.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
-        backgroundColor: "#87CEEB",
-        minHeight: 'auto',
-        height: 'fit-content',
-        paddingTop: '4rem',
-        paddingBottom: '4rem',
+        minHeight: isMobile ? '100vh' : 'auto',
       }}
     >
      
-      <div className="max-w-4xl mx-auto w-full relative z-10 pt-[8vh]">
+      <div className={`max-w-4xl mx-auto w-full relative z-10 pt-[6vh] pb-[4vh] ${isMobile ? 'min-h-[94vh]' : ''}`}>
         <div className="text-center mb-[6vh]">
           <img
             src="/images/title-memes.png"
@@ -46,7 +56,7 @@ export default function Memes() {
         </div>
 
         {/* 3x3 Meme Grid */}
-        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-[8vh]">
+        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-[8vh] px-6">
           {memeImages.map((image, index) => (
             <div
               key={index}
@@ -71,6 +81,13 @@ export default function Memes() {
           ))}
         </div>
       </div>
+      {/* Fondo sólido para cortar el azul del body */}
+      <div 
+        className="absolute inset-0 -z-10"
+        style={{
+          background: "linear-gradient(135deg, #87CEEB 0%, #B0E0E6 50%, #87CEFA 100%)",
+        }}
+      />
     </section>
   )
 }

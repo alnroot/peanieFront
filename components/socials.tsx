@@ -3,13 +3,14 @@
 import React, { useRef, useEffect, useState } from "react";
 
 const socialLinks = [
-  { name: "Twitter", image: "/images/btn-twitter.png", url: "#", alt: "Twitter/X" },
-  { name: "Telegram", image: "/images/btn-telegram.png", url: "#", alt: "Telegram" },
-  { name: "Dexscreener", image: "/images/btn-dexscreener-social.png", url: "#", alt: "Dexscreener" },
+  { name: "Twitter", image: "/images/btn-twitter.png", url: "https://x.com/peanieonsolana", alt: "Twitter/X" },
+  { name: "Telegram", image: "/images/btn-telegram.png", url: "https://t.me/peaniesol", alt: "Telegram" },
+  { name: "Dexscreener", image: "/images/btn-dexscreener-social.png", url: "https://dexscreener.com/solana/bhwwtwxustphvisrvfebb7jnezhjzahcqae8bchc9jyp", alt: "Dexscreener" },
 ];
 
 export default function Socials() {
   const [parallax, setParallax] = useState({ x: 0, y: 0, opacity: 1 });
+  const [isMobile, setIsMobile] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,10 +37,19 @@ export default function Socials() {
       setParallax({ x, y, opacity });
     };
 
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
     window.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleResize);
     handleScroll(); // Llamar una vez para establecer la posición inicial
+    handleResize(); // Llamar una vez para establecer el estado inicial
     
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   return (
@@ -49,7 +59,7 @@ export default function Socials() {
       className="min-h-screen relative overflow-hidden z-[10]"
       style={{
         backgroundImage: "url('/images/background-1.png')",
-        backgroundSize: "cover",
+        backgroundSize: isMobile ? "auto 100%" : "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
       }}
@@ -61,7 +71,7 @@ export default function Socials() {
         className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${parallax.x}px) translateY(${parallax.y}px) scaleX(1) scaleY(0.6)`,
+          transform: `translateX(${parallax.x + (isMobile ? 60 : 0)}px) translateY(${parallax.y}px) ${isMobile ? 'scaleX(1.3) scaleY(0.6)' : ''}`,
           opacity: parallax.opacity,
           transition: "transform 0.1s ease-out, opacity 0.1s ease-out",
         }}
@@ -88,8 +98,7 @@ export default function Socials() {
           ))}
         </div>
       </div>
-      {/* Degradado para transición suave */}
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white/80 to-transparent z-30 pointer-events-none" />
+
     </section>
   );
 }

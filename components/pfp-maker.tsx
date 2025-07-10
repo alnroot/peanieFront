@@ -46,6 +46,7 @@ export default function PFPMaker(): ReactElement {
   const sectionRef = useRef<HTMLDivElement>(null)
   const [canvasSize, setCanvasSize] = useState(400)
   const [parallax, setParallax] = useState({ x: 0, rot: 0 })
+  const [isMobile, setIsMobile] = useState(false)
 
   // DRASTIC CHANGE: Simple state with direct mouse tracking
   const [dragState, setDragState] = useState<{
@@ -78,6 +79,18 @@ export default function PFPMaker(): ReactElement {
     };
     animate();
     return () => cancelAnimationFrame(animationFrame);
+  }, []);
+
+  // Mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Llamar una vez para establecer el estado inicial
+    
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // ESSENTIAL: Image upload
@@ -269,12 +282,57 @@ export default function PFPMaker(): ReactElement {
       endOperation()
     }
 
+    // Global touch handlers
+    const handleGlobalTouchMove = (event: TouchEvent) => {
+      if (!dragState.isDragging && !dragState.isResizing && !dragState.isRotating) return
+      
+      event.preventDefault()
+      const touch = event.touches[0]
+      if (!touch || !dragState.elementId) return
+
+      if (dragState.isDragging) {
+        const canvasContainer = canvasContainerRef.current
+        if (!canvasContainer) return
+        
+        const rect = canvasContainer.getBoundingClientRect()
+        const x = ((touch.clientX - rect.left) / rect.width) * 100
+        const y = ((touch.clientY - rect.top) / rect.height) * 100
+        
+        updateElement(dragState.elementId, { x, y })
+      } else if (dragState.isResizing) {
+        const deltaX = touch.clientX - dragState.startPos.x
+        const deltaY = touch.clientY - dragState.startPos.y
+        const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+        const newSize = Math.max(20, Math.min(400, dragState.startSize + delta * 0.5))
+        
+        updateElement(dragState.elementId, { size: newSize })
+      } else if (dragState.isRotating) {
+        const canvasContainer = canvasContainerRef.current
+        if (!canvasContainer) return
+        
+        const rect = canvasContainer.getBoundingClientRect()
+        const centerX = rect.left + rect.width / 2
+        const centerY = rect.top + rect.height / 2
+        const angle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * (180 / Math.PI)
+        
+        updateElement(dragState.elementId, { rotation: angle })
+      }
+    }
+
+    const handleGlobalTouchEnd = () => {
+      endOperation()
+    }
+
     if (dragState.isDragging || dragState.isResizing || dragState.isRotating) {
       document.addEventListener('mousemove', handleGlobalMouseMove)
       document.addEventListener('mouseup', handleGlobalMouseUp)
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+      document.addEventListener('touchend', handleGlobalTouchEnd)
       return () => {
         document.removeEventListener('mousemove', handleGlobalMouseMove)
         document.removeEventListener('mouseup', handleGlobalMouseUp)
+        document.removeEventListener('touchmove', handleGlobalTouchMove)
+        document.removeEventListener('touchend', handleGlobalTouchEnd)
       }
     }
   }, [dragState.isDragging, dragState.isResizing, dragState.isRotating, dragState.elementId, dragState.startPos, dragState.startSize, dragState.startRotation, updateElement, endOperation])
@@ -298,22 +356,82 @@ export default function PFPMaker(): ReactElement {
     startRotate(elementId, event.clientX, event.clientY)
   }, [startRotate])
 
-  // MINIMAL: Basic handlers to prevent errors
+  // Touch handlers for mobile support
   const handleTouchStart = useCallback((event: React.TouchEvent, elementId: string) => {
-    // Disabled for now
-  }, [])
+    event.preventDefault()
+    event.stopPropagation()
+    const touch = event.touches[0]
+    if (touch) {
+      startDrag(elementId, touch.clientX, touch.clientY)
+    }
+  }, [startDrag])
+
   const handleTouchMove = useCallback((event: React.TouchEvent) => {
-    // Disabled for now
-  }, [])
+    if (!dragState.isDragging && !dragState.isResizing && !dragState.isRotating) return
+    
+    event.preventDefault()
+    const touch = event.touches[0]
+    if (!touch || !dragState.elementId) return
+
+    if (dragState.isDragging) {
+      const canvasContainer = canvasContainerRef.current
+      if (!canvasContainer) return
+      
+      const rect = canvasContainer.getBoundingClientRect()
+      const x = ((touch.clientX - rect.left) / rect.width) * 100
+      const y = ((touch.clientY - rect.top) / rect.height) * 100
+      
+      updateElement(dragState.elementId, { x, y })
+    } else if (dragState.isResizing) {
+      const deltaX = touch.clientX - dragState.startPos.x
+      const deltaY = touch.clientY - dragState.startPos.y
+      const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+      const newSize = Math.max(20, Math.min(400, dragState.startSize + delta * 0.5))
+      
+      updateElement(dragState.elementId, { size: newSize })
+    } else if (dragState.isRotating) {
+      const canvasContainer = canvasContainerRef.current
+      if (!canvasContainer) return
+      
+      const rect = canvasContainer.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const angle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * (180 / Math.PI)
+      
+      updateElement(dragState.elementId, { rotation: angle })
+    }
+  }, [dragState, updateElement])
   const handleTouchEnd = useCallback(() => {
-    // Disabled for now
-  }, [])
+    endOperation()
+  }, [endOperation])
+
   const handleTouchResizeStart = useCallback((event: React.TouchEvent, elementId: string) => {
-    // Disabled for now
-  }, [])
+    event.preventDefault()
+    event.stopPropagation()
+    const touch = event.touches[0]
+    if (touch) {
+      startResize(elementId, touch.clientX, touch.clientY)
+    }
+  }, [startResize])
+
+  const handleTouchRotationStart = useCallback((event: React.TouchEvent, elementId: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const touch = event.touches[0]
+    if (touch) {
+      startRotate(elementId, touch.clientX, touch.clientY)
+    }
+  }, [startRotate])
+
   const handleWheel = useCallback((event: React.WheelEvent, elementId: string) => {
-    // Disabled for now
-  }, [])
+    event.preventDefault()
+    const delta = event.deltaY
+    const element = penguinElements.find(el => el.id === elementId)
+    if (element) {
+      const newSize = Math.max(20, Math.min(400, element.size - delta * 0.5))
+      updateElement(elementId, { size: newSize })
+    }
+  }, [penguinElements, updateElement])
 
   const downloadPFP = useCallback(async () => {
     if (!uploadedImage || !canvasRef.current) return
@@ -353,12 +471,13 @@ export default function PFPMaker(): ReactElement {
     <section
       id="pfp-maker"
       ref={sectionRef}
-      className="min-h-screen flex items-center relative overflow-hidden"
+      className="min-h-screen relative overflow-hidden"
       style={{
         backgroundImage: "url('/images/background-3.png')",
-        backgroundSize: "cover",
+        backgroundSize: isMobile ? "auto 100%" : "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
+        minHeight: isMobile ? '100vh' : 'auto',
       }}
     >
       {/* Pingüino animado de izquierda a derecha */}
@@ -368,14 +487,14 @@ export default function PFPMaker(): ReactElement {
         className="absolute top-0 left-0 w-full h-full pointer-events-none select-none"
         style={{
           zIndex: 1,
-          transform: `translateX(${parallax.x}px) rotate(${parallax.rot}deg) scaleX(1) scaleY(0.6)`,
+          transform: `translateX(${parallax.x}px) rotate(${parallax.rot}deg) ${isMobile ? 'scaleX(1.3) scaleY(0.6)' : ''}`,
           transition: "none",
         }}
         draggable={false}
       />
       {/* Contenido */}
-      <div className="max-w-7xl mx-auto w-full relative z-[20] pt-[8vh]">
-        <div className="text-center mb-[10vh]">
+      <div className={`max-w-7xl mx-auto w-full relative z-[20] pt-[6vh] pb-[4vh] ${isMobile ? 'min-h-[94vh]' : ''}`}>
+        <div className="text-center mb-[6vh]">
           <img
             src="/images/title-pfp-maker.png"
             alt="PFP MAKER"
@@ -383,7 +502,7 @@ export default function PFPMaker(): ReactElement {
           />
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-4 gap-6">
           {/* Presets Panel */}
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardContent className="space-y-4 pt-6">
@@ -554,9 +673,9 @@ export default function PFPMaker(): ReactElement {
                             <>
                               {/* Rotation handle (green, top center) */}
                               <div
-                                className="rotation-handle absolute w-4 h-4 bg-green-500 rounded-full cursor-grab hover:bg-green-400 transition-colors z-30"
+                                className={`rotation-handle absolute ${isMobile ? 'w-6 h-6' : 'w-4 h-4'} bg-green-500 rounded-full cursor-grab hover:bg-green-400 transition-colors z-30`}
                                 style={{ 
-                                  top: "-8px", 
+                                  top: isMobile ? "-12px" : "-8px", 
                                   left: "50%", 
                                   transform: "translateX(-50%)",
                                   boxShadow: "0 0 8px rgba(34, 197, 94, 0.6)"
@@ -566,14 +685,15 @@ export default function PFPMaker(): ReactElement {
                                   e.stopPropagation()
                                   handleRotationStart(e, element.id)
                                 }}
+                                onTouchStart={(e) => handleTouchRotationStart(e, element.id)}
                               />
 
                               {/* Corner resize handles (blue) */}
                               <div
-                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30"
+                                className={`resize-handle absolute ${isMobile ? 'w-5 h-5' : 'w-3 h-3'} bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30`}
                                 style={{ 
-                                  top: "-8px", 
-                                  right: "-8px",
+                                  top: isMobile ? "-10px" : "-8px", 
+                                  right: isMobile ? "-10px" : "-8px",
                                   boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
                                 }}
                                 onMouseDown={(e) => {
@@ -584,10 +704,10 @@ export default function PFPMaker(): ReactElement {
                                 onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-ne-resize hover:bg-blue-400 transition-colors z-30"
+                                className={`resize-handle absolute ${isMobile ? 'w-5 h-5' : 'w-3 h-3'} bg-blue-500 rounded-full cursor-ne-resize hover:bg-blue-400 transition-colors z-30`}
                                 style={{ 
-                                  bottom: "-8px", 
-                                  right: "-8px",
+                                  bottom: isMobile ? "-10px" : "-8px", 
+                                  right: isMobile ? "-10px" : "-8px",
                                   boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
                                 }}
                                 onMouseDown={(e) => {
@@ -598,10 +718,10 @@ export default function PFPMaker(): ReactElement {
                                 onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30"
+                                className={`resize-handle absolute ${isMobile ? 'w-5 h-5' : 'w-3 h-3'} bg-blue-500 rounded-full cursor-nw-resize hover:bg-blue-400 transition-colors z-30`}
                                 style={{ 
-                                  bottom: "-8px", 
-                                  left: "-8px",
+                                  bottom: isMobile ? "-10px" : "-8px", 
+                                  left: isMobile ? "-10px" : "-8px",
                                   boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
                                 }}
                                 onMouseDown={(e) => {
@@ -612,10 +732,10 @@ export default function PFPMaker(): ReactElement {
                                 onTouchStart={(e) => handleTouchResizeStart(e, element.id)}
                               />
                               <div
-                                className="resize-handle absolute w-3 h-3 bg-blue-500 rounded-full cursor-se-resize hover:bg-blue-400 transition-colors z-30"
+                                className={`resize-handle absolute ${isMobile ? 'w-5 h-5' : 'w-3 h-3'} bg-blue-500 rounded-full cursor-se-resize hover:bg-blue-400 transition-colors z-30`}
                                 style={{ 
-                                  top: "-8px", 
-                                  left: "-8px",
+                                  top: isMobile ? "-10px" : "-8px", 
+                                  left: isMobile ? "-10px" : "-8px",
                                   boxShadow: "0 0 6px rgba(59, 130, 246, 0.6)"
                                 }}
                                 onMouseDown={(e) => {
@@ -657,7 +777,7 @@ export default function PFPMaker(): ReactElement {
                 )}
               </div>
 
-              <div className="flex gap-4 mt-6">
+              <div className="flex gap-4 mt-4">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="flex-1 px-6 py-2 rounded-full border-4 border-cyan-400 bg-white text-black font-bold text-lg shadow-md hover:scale-105 transition-transform duration-300 flex items-center justify-center gap-2"
@@ -744,13 +864,13 @@ export default function PFPMaker(): ReactElement {
               </div>
 
               {/* Custom Customize Button - FUNCIÓN PRINCIPAL */}
-              <div className="text-center mt-4">
-                <img
-                  src="/images/btn-customize-pfp.png"
-                  alt="Customize your PFP"
-                  className="h-16 md:h-20 w-auto mx-auto cursor-pointer hover:scale-105 transition-transform duration-300"
-                  onClick={customizeRandomPFP}
-                />
+              <div className="text-center mt-3">
+                                  <img
+                    src="/images/btn-customize-pfp.png"
+                    alt="Customize your PFP"
+                    className="h-12 md:h-16 w-auto mx-auto cursor-pointer hover:scale-105 transition-transform duration-300"
+                    onClick={customizeRandomPFP}
+                  />
                 {!uploadedImage && <p className="text-gray-500 text-sm mt-2">Upload an image first!</p>}
               </div>
 
@@ -859,8 +979,7 @@ export default function PFPMaker(): ReactElement {
           </Card>
         </div>
       </div>
-      {/* Degradado para transición suave */}
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white/80 to-transparent z-30 pointer-events-none" />
+
     </section>
   )
 }

@@ -7,6 +7,7 @@ import Tokenomics from "../components/tokenomics"
 import Memes from "../components/memes"
 import ParallaxElements from "../components/parallax-elements"
 import LoadingScreen from "../components/loading-screen"
+import SectionDivider from "../components/section-divider"
 
 export const metadata: Metadata = {
   title: "PEANIE - Home | The Coolest Penguin Token on Solana",
@@ -21,10 +22,15 @@ export default function Page() {
       <div className="relative min-h-screen overflow-x-hidden">
         <ParallaxElements />
         <Hero />
+        <SectionDivider />
         <Socials />
+        <SectionDivider />
         <Giveaways />
+        <SectionDivider />
         <PFPMaker />
+        <SectionDivider />
         <Tokenomics />
+        <SectionDivider />
         <Memes />
       </div>
     </>

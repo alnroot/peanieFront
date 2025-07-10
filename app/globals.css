@@ -19,7 +19,6 @@
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #0891b2 100%);
-  padding-bottom: 80px;
   min-height: 100vh;
 }
 
@@ -33,17 +32,11 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Mejorar la legibilidad del menú flotante */
-@media (max-width: 640px) {
-  body {
-    padding-bottom: 90px;
-  }
-}
 
 /* Optimización adicional para el menú compacto */
 @media (max-width: 480px) {
   body {
-    padding-bottom: 85px;
+    padding-bottom: 1px !important;
   }
 }
 
