@@ -162,9 +162,11 @@ export default function Giveaways() {
       <style jsx>{`
         .custom-bullet {
           color: rgba(0,185,219,1);
-          font-size: 1.5em;
+          font-size: 1.2em;
           font-weight: bold;
           margin-right: 0.5em;
+          line-height: 1;
+          margin-top: 0.1em;
         }
         .bullet-list {
           list-style: none;
@@ -174,11 +176,11 @@ export default function Giveaways() {
         .bullet-list li {
           display: flex;
           align-items: flex-start;
-          margin-bottom: 0;
+          margin-bottom: 0.5em;
         }
         .bullet-text {
           flex: 1;
-          line-height: 1.1;
+          line-height: 1.4;
         }
       `}</style>
     </section>
